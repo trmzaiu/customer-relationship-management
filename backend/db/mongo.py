@@ -1,4 +1,6 @@
+import os
 from pymongo import MongoClient
 
-client = MongoClient("mongodb+srv://ismproject:<db_password>@ismproject.iao7sef.mongodb.net/?retryWrites=true&w=majority&appName=ISMProject")
-db = client.mydatabase
+connection_string = os.getenv('MONGO_URI', 'mongodb+srv://ismproject:ismproject@ismproject.iao7sef.mongodb.net/test?retryWrites=true&w=majority&appName=ISMProject')
+client = MongoClient(connection_string)
+db = client.test
