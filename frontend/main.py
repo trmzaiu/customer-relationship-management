@@ -1,17 +1,32 @@
 import streamlit as st
-from pages import dashboard, customers, reports
+from frontend.pages.login import login_page
+from frontend.pages.register import register_page
 
-st.set_page_config(page_title="Admin Dashboard", layout="wide")
+if 'user_db' not in st.session_state:
+    st.session_state.user_db = {
+        "admin": "admin123"
+    }
 
-# Sidebar
-st.sidebar.title("Admin Menu")
-page = st.sidebar.radio("Go to", ["Dashboard", "Customers", "Reports"])
-refresh = st.sidebar.checkbox("Auto-refresh every 10 seconds")
+menu = ["Login", "Register"]
+if st.session_state.get('logged_in'):
+    menu = ["Dashboard", "Logout"]
 
-# Router
-if page == "Dashboard":
-    dashboard.show(refresh)
-elif page == "Customers":
-    customers.show()
-elif page == "Reports":
-    reports.show()
+choice = st.sidebar.selectbox("Navigation", menu)
+
+if choice == "Login":
+    if st.session_state.get('logged_in'):
+        st.success("Already logged in.")
+    else:
+        login_page(st.session_state.user_db)
+
+elif choice == "Register":
+    register_page(st.session_state.user_db)
+
+elif choice == "Dashboard":
+    st.title("🎯 CRM Dashboard")
+    st.write(f"Hello, {st.session_state['username']} 👋")
+
+elif choice == "Logout":
+    st.session_state['logged_in'] = False
+    st.session_state['username'] = ""
+    st.experimental_rerun()
