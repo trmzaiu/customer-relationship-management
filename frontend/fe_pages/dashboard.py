@@ -20,15 +20,12 @@ def dashboard_page(auto_refresh=False):
         regular_customers = customers_df[customers_df['Type'] == 'Regular'].shape[0]
         new_customers = customers_df[customers_df['Type'] == 'New'].shape[0]
 
-        weekly_interactions = interactions_df.shape[0]
-
         # KPIs
-        col1, col2, col3, col4, col5 = st.columns(5)
+        col1, col2, col3, col4 = st.columns(4)
         col1.metric("Total Customers", total_customers)
         col2.metric("VIP Customers", vip_customers)
         col3.metric("Regular Customers", regular_customers)
         col4.metric("New Customers", new_customers)
-        col5.metric("Interactions This Week", weekly_interactions)
 
         st.divider()
 
@@ -37,14 +34,12 @@ def dashboard_page(auto_refresh=False):
         customer_summary = customers_df['Type'].value_counts().reset_index()
         customer_summary.columns = ['Customer Type', 'Count']
 
-        col6, col7 = st.columns(2)
-        with col6:
-            fig_pie = px.pie(customer_summary, names='Customer Type', values='Count',
-                             title='Customer Distribution', hole=0.4)
+        col5, col6 = st.columns(2)
+        with col5:
+            fig_pie = px.pie(customer_summary, names='Customer Type', values='Count', title='Customer Distribution', hole=0.4)
             st.plotly_chart(fig_pie, use_container_width=True)
-        with col7:
-            fig_bar = px.bar(customer_summary, x='Customer Type', y='Count',
-                             title='Customer Count', color='Customer Type')
+        with col6:
+            fig_bar = px.bar(customer_summary, x='Customer Type', y='Count', title='Customer Count', color='Customer Type')
             st.plotly_chart(fig_bar, use_container_width=True)
 
         st.divider()
@@ -57,6 +52,6 @@ def dashboard_page(auto_refresh=False):
 
         if auto_refresh:
             time.sleep(10)
-            st.experimental_rerun()
+            st.rerun()
         else:
             break

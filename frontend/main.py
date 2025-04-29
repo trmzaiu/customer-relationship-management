@@ -8,30 +8,52 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'utils')
 
 from login import login_page
 from dashboard import dashboard_page
+from interactions import interaction_page
+from customers import customer_page
+from send_email import send_email_page
+from reports import report_page
 from user_generator import load_user_db
 
 st.set_page_config(page_title="CRM App", layout="wide")
 
-# Initialize session state
 if 'user_db' not in st.session_state:
     st.session_state.user_db = load_user_db()
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
-# Show only login if not logged in
-if st.session_state.get('logged_in') == False:
+if not st.session_state.logged_in:
     login_page(st.session_state.user_db)
 else:
-    # Show sidebar only if logged in
-    menu = ["Dashboard", "Logout"]
-    choice = st.sidebar.selectbox("Navigation", menu)
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = "Dashboard"
 
-    if choice == "Dashboard":
-        dashboard_page()
-    elif choice == "Logout":
+    # Sidebar UI
+    st.sidebar.title("Admin Dashboard")
+    if st.sidebar.button("🏠 Dashboard"):
+        st.session_state.current_page = "Dashboard"
+    if st.sidebar.button("👥 Customers"):
+        st.session_state.current_page = "Customers"
+    if st.sidebar.button("💬 Interactions"):
+        st.session_state.current_page = "Interactions"
+    if st.sidebar.button("✉️ Send Email"):
+        st.session_state.current_page = "Send Email"
+    if st.sidebar.button("📊 Reports"):
+        st.session_state.current_page = "Reports"
+    if st.sidebar.button("🚪 Logout"):
         st.session_state.logged_in = False
-        st.session_state.username = ""
-        st.session_state.user_db = {}
-        st.session_state['logged_in'] = False
-        # Rerun after logout
-        st.runtime.legacy_rerun()
+        st.session_state.pop("username", None)
+        st.session_state.pop("current_page", None)
+        st.rerun()
+
+    # Render selected page
+    page = st.session_state.current_page
+    if page == "Dashboard":
+        dashboard_page()
+    elif page == "Customers":
+        customer_page()
+    elif page == "Interactions":
+        interaction_page()
+    elif page == "Send Email":
+        send_email_page()
+    elif page == "Reports":
+        report_page()

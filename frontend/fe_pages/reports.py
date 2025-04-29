@@ -1,18 +1,23 @@
-# import streamlit as st
-# import pandas as pd
-# import plotly.express as px
-# from utils.data_generator import generate_interaction_data
+import streamlit as st
+import plotly.express as px
+from utils.customer_generator import generate_customer_data, generate_interaction_data
 
-# def show():
-#     st.title("📑 Reports & Analytics")
+def report_page():
+    st.title("📊 Reports")
 
-#     interactions_df = generate_interaction_data()
+    # Load data
+    customers_df = generate_customer_data()
+    interactions_df = generate_interaction_data()
 
-#     st.subheader("Overall Interaction Types")
-#     interaction_summary = interactions_df['Type'].value_counts().reset_index()
-#     interaction_summary.columns = ['Interaction Type', 'Count']
+    # Customer Distribution Chart
+    st.header("Customer Distribution")
+    customer_summary = customers_df['Type'].value_counts().reset_index()
+    customer_summary.columns = ['Customer Type', 'Count']
+    fig_pie = px.pie(customer_summary, names='Customer Type', values='Count', title='Customer Distribution')
+    st.plotly_chart(fig_pie)
 
-#     fig = px.bar(interaction_summary, x='Interaction Type', y='Count', color='Interaction Type')
-#     st.plotly_chart(fig, use_container_width=True)
-
-#     st.dataframe(interactions_df, use_container_width=True)
+    # Interaction Trends Chart
+    st.header("Weekly Interaction Trends")
+    weekly_trend = interactions_df.groupby('Date').size().reset_index(name='Interactions')
+    fig_line = px.line(weekly_trend, x='Date', y='Interactions', markers=True)
+    st.plotly_chart(fig_line)

@@ -2,21 +2,46 @@ import pandas as pd
 import random
 from datetime import datetime, timedelta
 
-def generate_customer_data(n=100):
-    data = {
-        'Customer ID': [f"CUST{str(i).zfill(4)}" for i in range(n)],
-        'Name': [f"Customer {i}" for i in range(n)],
-        'Type': random.choices(['VIP', 'Regular', 'New'], k=n),
-        'Email': [f"customer{i}@example.com" for i in range(n)],
-        'Joined Date': [(datetime.now() - timedelta(days=random.randint(0, 1000))).strftime('%Y-%m-%d') for _ in range(n)]
-    }
-    return pd.DataFrame(data)
+def generate_customer_data():
+    customer_types = ['VIP', 'Regular', 'New']
+    customers = []
 
-def generate_interaction_data(n=100):
-    data = {
-        'Interaction ID': [f"INT{str(i).zfill(4)}" for i in range(n)],
-        'Customer': [f"Customer {random.randint(0, 99)}" for _ in range(n)],
-        'Type': random.choices(['Email', 'Call', 'Meeting'], k=n),
-        'Date': [(datetime.now() - timedelta(days=random.randint(0, 7))).strftime('%Y-%m-%d') for _ in range(n)]
-    }
-    return pd.DataFrame(data)
+    for i in range(100):
+        customer_id = f"CUST-{i+1}"
+        name = f"Customer {i+1}"
+        email = f"customer{i+1}@example.com"
+        phone = f"+1234567890{i+1}"
+        customer_type = random.choice(customer_types)
+        created_at = datetime.now() - timedelta(days=random.randint(0, 365))
+        
+        customers.append({
+            "Customer ID": customer_id,
+            "Name": name,
+            "Email": email,
+            "Phone": phone,
+            "Type": customer_type,
+            "Created At": created_at
+        })
+
+    return pd.DataFrame(customers)
+
+def generate_interaction_data():
+    interaction_types = ['Email', 'Call', 'Meeting']
+    interactions = []
+
+    for i in range(200):
+        interaction_id = f"INT-{i+1}"
+        customer_id = f"CUST-{random.randint(1, 100)}"
+        interaction_type = random.choice(interaction_types)
+        date = datetime.now() - timedelta(days=random.randint(0, 30))
+        notes = f"Interaction {i+1}: {interaction_type} with customer"
+        
+        interactions.append({
+            "Interaction ID": interaction_id,
+            "Customer ID": customer_id,
+            "Type": interaction_type,
+            "Date": date,
+            "Notes": notes
+        })
+
+    return pd.DataFrame(interactions)
