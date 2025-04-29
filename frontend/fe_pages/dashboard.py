@@ -2,9 +2,12 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import time
-from utils.data_generator import generate_customer_data, generate_interaction_data
+import random
 
-def show(auto_refresh=False):
+from datetime import datetime, timedelta
+from utils.customer_generator import generate_customer_data, generate_interaction_data
+
+def dashboard_page(auto_refresh=False):
     while True:
         st.title("🏠 Dashboard Overview")
 
