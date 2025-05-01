@@ -1,24 +1,51 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from db.mongo import db
-
+import json
 app = Flask(__name__, template_folder='../frontend/templates')
 app.secret_key = 'your_secret_key_here'
 
-@app.route('/', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        print(username, password)
-        user = db.users.find_one({'username': username, 'password': password, 'is_admin': True})
-        print(user)
-        if user:
-            session['username'] = username
-            return redirect(url_for('dashboard'))
-        else:
-            flash('Invalid credentials or not an admin.')
-            return render_template('login.html')
-    return render_template('login.html')
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    
+    # Verify credentials in MongoDB
+    user = db.users.find_one({'username': username, 'password': password})
+    
+    if user:
+        # Convert ObjectId to string to make it JSON serializable
+        user_id = str(user.get('_id'))
+        
+        # Extract relevant user data 
+        user_data = {
+            'user_id': user_id,
+            'username': user.get('username'),
+            'is_admin': user.get('is_admin', False),
+        }
+        
+        # Authentication successful
+        response = app.response_class(
+            response=json.dumps({
+                "status": "success", 
+                "message": "Login successful",
+                "user_data": user_data
+            }),
+            status=200,
+            mimetype='application/json'
+        )
+        return response
+    else:
+        # Authentication failed
+        response = app.response_class(
+            response=json.dumps({
+                "status": "error", 
+                "message": "Invalid credentials"
+            }),
+            status=401,
+            mimetype='application/json'
+        )
+        return response
 
 @app.route('/dashboard')
 def dashboard():
