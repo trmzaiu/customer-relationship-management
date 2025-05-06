@@ -12,7 +12,7 @@ from interactions import interaction_page
 from customers import customer_page
 from send_email import send_email_page
 from reports import report_page
-from user_generator import load_user_db
+from user_generator import load_user_db 
 
 st.set_page_config(page_title="CRM App", layout="wide")
 

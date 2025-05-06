@@ -1,10 +1,13 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, Response, jsonify, render_template, request, redirect, url_for, flash, session
 from db.mongo import db
 import json
+import datetime
+from bson.objectid import ObjectId
 
 app = Flask(__name__, template_folder="../frontend/templates")
 app.secret_key = "your_secret_key_here"
 
+customers = db.customers
 
 @app.route("/api/login", methods=["POST"])
 def api_login():
@@ -122,6 +125,69 @@ def update_user(username):
     else:
         flash("No changes provided.")
     return redirect(url_for("list_users"))
+
+def parse_customer_id(cid_str):
+    return int(cid_str) if cid_str.isdigit() else cid_str
+
+# ─── CUSTOMER CRUD ────────────────────────────────────────────────────────────
+@app.route("/api/customers", methods=["POST"])
+def create_customer():
+    data = request.get_json() or {}
+    # auto-generate an integer ID
+    if "customer_id" not in data:
+        data["customer_id"] = customers.count_documents({}) + 1
+
+    cust = {
+        "customer_id": data["customer_id"],
+        "name":        data["name"],
+        "email":       data["email"],
+        "phone":       data["phone"],
+        "type":        data.get("type", "Regular"),
+        "datetime":    datetime.datetime.utcnow()
+    }
+    result = customers.insert_one(cust)
+    cust["_id"]      = str(result.inserted_id)
+    cust["datetime"] = cust["datetime"].isoformat()
+
+    return jsonify(cust), 201
+
+@app.route("/api/customers", methods=["GET"])
+def get_customers():
+    docs = customers.find({}, {"_id":0}).sort("datetime", -1)
+    out  = []
+    for d in docs:
+        # if datetime is a datetime object, convert to string
+        if hasattr(d.get("datetime"), "isoformat"):
+            d["datetime"] = d["datetime"].isoformat()
+        out.append(d)
+    return jsonify(out), 200
+
+@app.route("/api/customers/<cust_id>", methods=["GET"])
+def get_customer(cust_id):
+    key = parse_customer_id(cust_id)
+    doc = customers.find_one({"customer_id": key}, {"_id":0})
+    if not doc:
+        return jsonify(error="Not found"), 404
+    if hasattr(doc.get("datetime"), "isoformat"):
+        doc["datetime"] = doc["datetime"].isoformat()
+    return jsonify(doc), 200
+
+@app.route("/api/customers/<cust_id>", methods=["PUT"])
+def update_customer(cust_id):
+    key = parse_customer_id(cust_id)
+    data = request.get_json() or {}
+    result = customers.update_one({"customer_id": key}, {"$set": data})
+    if result.matched_count == 0:
+        return jsonify(error="Not found"), 404
+    return jsonify(modified_count=result.modified_count), 200
+
+@app.route("/api/customers/<cust_id>", methods=["DELETE"])
+def delete_customer(cust_id):
+    key = parse_customer_id(cust_id)
+    result = customers.delete_one({"customer_id": key})
+    if result.deleted_count == 0:
+        return jsonify(error="Not found"), 404
+    return jsonify(deleted_count=result.deleted_count), 200
 
 if __name__ == "__main__":
     app.run(debug=True)

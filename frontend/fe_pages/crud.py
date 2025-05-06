@@ -3,7 +3,7 @@ import requests
 
 API_URL = "http://localhost:5000/api/customers"
 
-def customer_page():
+def customer_crud():
     st.header("👥 Customers Management")
 
     # ─────────────── Add new customer ───────────────
