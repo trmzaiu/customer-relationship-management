@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import pandas as pd
 
 API_URL = "http://localhost:5000/api/customers"
 
@@ -36,8 +37,11 @@ def customer_page():
     if st.button("🔄 Load Customers list"):
         res = requests.get(API_URL)
         if res.ok:
-            df = res.json()
-            st.dataframe(df)
+                data = res.json()
+                display_fields = ["customer_id", "name", "type", "email", "phone", "datetime"]
+                df = pd.DataFrame(data)[display_fields]
+
+                st.dataframe(df)
         else:
             st.error("Cannot load customers list")
 

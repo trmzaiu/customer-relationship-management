@@ -10,7 +10,7 @@ from login import login_page
 from dashboard import dashboard_page
 from interactions import interaction_page
 from customers import customer_page
-from send_email import send_email_page
+from interact_customer import interact_customer_page
 from reports import report_page
 from user_generator import load_user_db 
 
@@ -35,8 +35,6 @@ else:
         st.session_state.current_page = "Customers"
     if st.sidebar.button("💬 Interactions"):
         st.session_state.current_page = "Interactions"
-    if st.sidebar.button("✉️ Send Email"):
-        st.session_state.current_page = "Send Email"
     if st.sidebar.button("📊 Reports"):
         st.session_state.current_page = "Reports"
     if st.sidebar.button("🚪 Logout"):
@@ -53,7 +51,7 @@ else:
         customer_page()
     elif page == "Interactions":
         interaction_page()
-    elif page == "Send Email":
-        send_email_page()
+    elif page == "Interact With Customer":
+        interact_customer_page()
     elif page == "Reports":
         report_page()

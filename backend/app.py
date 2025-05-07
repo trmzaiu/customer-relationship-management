@@ -189,5 +189,25 @@ def delete_customer(cust_id):
         return jsonify(error="Not found"), 404
     return jsonify(deleted_count=result.deleted_count), 200
 
+# ─── CUSTOMER Interaction ────────────────────────────────────────────────────────────
+@app.route("/api/interactions", methods=["GET"])
+def get_all_interactions():
+    interactions = db.interactions.find()
+    result = []
+    for doc in interactions:
+        doc["_id"] = str(doc["_id"])  # Convert ObjectId to string
+        # Optional: Format datetime if exists
+        if "datetime" in doc and hasattr(doc["datetime"], "isoformat"):
+            doc["datetime"] = doc["datetime"].isoformat()
+        result.append(doc)
+    return jsonify(result), 200
+
+@app.route("/api/interactions", methods=["POST"])
+def add_interaction():
+    data = request.json or {}
+    data["timestamp"] = datetime.datetime.utcnow()
+    db.interactions.insert_one(data)
+    return jsonify({"status": "success", "message": "Interaction saved"}), 201
+
 if __name__ == "__main__":
     app.run(debug=True)
