@@ -1,6 +1,7 @@
 from flask import Flask, Response, jsonify, render_template, request, redirect, url_for, flash, session
 from db.mongo import db
 import json
+from bson.son import SON
 import datetime
 from bson.objectid import ObjectId
 
@@ -8,7 +9,7 @@ app = Flask(__name__, template_folder="../frontend/templates")
 app.secret_key = "your_secret_key_here"
 
 customers = db.customers
-
+interactions = db.interactions
 @app.route("/api/login", methods=["POST"])
 def api_login():
     data = request.json
@@ -190,23 +191,97 @@ def delete_customer(cust_id):
         return jsonify(error="Not found"), 404
     return jsonify(deleted_count=result.deleted_count), 200
 
+@app.route("/api/dashboard-metrics", methods=["GET"])
+def dashboard_metrics():
+    customer_count = customers.count_documents({})
+
+    customer_by_type = list(customers.aggregate([
+        {"$group": {"_id": "$type", "count": {"$sum": 1}}}
+    ]))
+    customer_by_type_dict = {doc["_id"]: doc["count"] for doc in customer_by_type}
+
+    interaction_count = interactions.count_documents({})
+    interaction_by_type = interactions.aggregate([
+        {"$group": {"_id": "$type", "count": {"$sum": 1}}}
+    ])
+    interaction_by_type_dict = {doc["_id"]: doc["count"] for doc in interaction_by_type}
+
+    customer_growth = list(customers.aggregate([
+        {
+            "$group": {
+                "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$datetime"}},
+                "count": {"$sum": 1}
+            }
+        },
+        {"$sort": SON([("_id", 1)])},
+        {"$project": {"date": "$_id", "count": 1, "_id": 0}} 
+    ]))
+
+    interaction_trend = list(interactions.aggregate([
+        {
+            "$group": {
+                "_id": { "$dateToString": {"format": "%Y-%m-%d", "date": "$date"} },
+                "count": {"$sum": 1}
+            }
+        },
+        
+        {"$project": {"date": "$_id", "count": 1, "_id": 0}} 
+        
+    ]))
+
+
+    return jsonify({
+        "customer_count": customer_count,
+        "customer_by_type": customer_by_type_dict,
+        "interaction_count": interaction_count,
+        "interaction_by_type": interaction_by_type_dict,
+        "customer_growth": customer_growth,
+        "interaction_trend": interaction_trend
+    }), 200
+
 # ─── CUSTOMER Interaction ────────────────────────────────────────────────────────────
 @app.route("/api/interactions", methods=["GET"])
 def get_all_interactions():
-    interactions = db.interactions.find()
-    result = []
-    for doc in interactions:
-        doc["_id"] = str(doc["_id"])  # Convert ObjectId to string
-        # Optional: Format datetime if exists
-        if "datetime" in doc and hasattr(doc["datetime"], "isoformat"):
-            doc["datetime"] = doc["datetime"].isoformat()
-        result.append(doc)
+    pipeline = [
+        {
+            "$lookup": {
+                "from": "customers",
+                "localField": "customer_id",
+                "foreignField": "customer_id",
+                "as": "customer_info"
+            }
+        },
+        {
+            "$unwind": {
+                "path": "$customer_info",
+                "preserveNullAndEmptyArrays": True
+            }
+        },
+        {
+            "$project": {
+                "_id": {"$toString": "$_id"},
+                "customer_id": 1,
+                "type": 1,
+                "notes": 1,
+                "date": 1,
+                "customer": "$customer_info.name"
+            }
+        },
+        {"$sort": {"timestamp": -1}},
+    ]
+
+    result = list(db.interactions.aggregate(pipeline))
+    # Format ISO timestamp nếu cần
+    for doc in result:
+        if "timestamp" in doc and hasattr(doc["timestamp"], "isoformat"):
+            doc["timestamp"] = doc["timestamp"].isoformat()
     return jsonify(result), 200
+
 
 @app.route("/api/interactions", methods=["POST"])
 def add_interaction():
     data = request.json or {}
-    data["timestamp"] = datetime.datetime.utcnow()
+    data["timestamp"] = datetime.datetime.now(datetime.timezone.utc)
     db.interactions.insert_one(data)
     return jsonify({"status": "success", "message": "Interaction saved"}), 201
 

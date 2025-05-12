@@ -7,7 +7,6 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'utils')))
 from user_generator import load_user_db
 
-
 # Apply custom CSS
 def load_css():
     st.markdown("""
@@ -289,10 +288,6 @@ def load_css():
     </style>
     """, unsafe_allow_html=True)
 
-# --- Constants ---
-CUSTOMER_API_URL = "http://localhost:5000/api/customers"
-INTERACT_API_URL = "http://localhost:5000/api/interactions"
-
 # --- App Navigation ---
 def initialize_session_state():
     if 'user_db' not in st.session_state:
@@ -303,39 +298,6 @@ def initialize_session_state():
         st.session_state.current_page = "Dashboard"
     if 'sidebar_state' not in st.session_state:
         st.session_state.sidebar_state = "expanded"
-
-def check_email_exists(email_to_check):
-    try:
-        res = requests.get(CUSTOMER_API_URL)
-        
-        if not res.ok:
-            return False, None
-        
-        data = res.json()
-        
-        for customer in data:
-            if 'email' in customer and str(customer['email']).lower() == email_to_check.lower():
-                return True, customer
-        
-        return False, None
-    
-    except Exception as e:
-        print(f"Error checking email: {e}")
-        return False, None
-
-def check_customer_id_exist(id):
-    res = requests.get(CUSTOMER_API_URL)
-        
-    if not res.ok:
-        return False, None
-    
-    data = res.json()
-    
-    for customer in data:
-        if 'customer_id' in customer and customer['customer_id'] == id:
-            return True, customer['name']
-    
-    return False, None
 
 def get_icon_for_page(page_name):
     icons = {

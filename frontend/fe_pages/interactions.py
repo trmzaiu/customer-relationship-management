@@ -5,9 +5,9 @@ import sys
 import os
 from datetime import datetime
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'fe_pages')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'service')))
 
-from widget import INTERACT_API_URL
+from api import get_interaction
 
 def interaction_page():
     st.title("📞 Interactions")
@@ -15,29 +15,25 @@ def interaction_page():
     st.header("Interaction History")
 
     try:
-        res = requests.get(INTERACT_API_URL)
-        if res.status_code == 200:
-            data = res.json()
+        data = get_interaction()
 
-            if not data:
-                st.info("No interactions found.")
-            else:
-                display_fields = ["customer_id", "type", "notes", "date"]
-                df = pd.DataFrame(data)[display_fields]
-
-                df = df.rename(columns={
-                    "customer_id": "Customer_id",
-                    "type": "Interaction Type",
-                    "notes": "Notes",
-                    "date": "Date"
-                })
-
-                df["Date"] = pd.to_datetime(df["Date"], format="%a, %d %b %Y %H:%M:%S %Z")
-                df["Date"] = df["Date"].dt.strftime("%b %d %Y %H:%M")
-
-                st.dataframe(df)
+        if not data:
+            st.info("No interactions found.")
         else:
-            st.error(f"Failed to fetch data: {res.status_code}")
+            display_fields = ["customer", "type", "notes", "date"]
+            df = pd.DataFrame(data)[display_fields]
+
+            df = df.rename(columns={
+                "customer": "Customer",
+                "type": "Interaction Type",
+                "notes": "Notes",
+                "date": "Date"
+            })
+
+            df["Date"] = pd.to_datetime(df["Date"])
+            df["Date"] = df["Date"].dt.strftime("%b %d %Y %H:%M")
+
+            st.dataframe(df)
     except Exception as e:
         st.error(f"Error: {e}")
 

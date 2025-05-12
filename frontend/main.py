@@ -10,6 +10,7 @@ st.set_page_config(
 )
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'fe_pages')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'service')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'utils')))
 
 from login import login_page

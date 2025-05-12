@@ -7,17 +7,13 @@ import sys
 import os
 from datetime import datetime
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'fe_pages')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'service')))
 
-from widget import CUSTOMER_API_URL, check_email_exists
+from api import CUSTOMER_API_URL, check_email_exists, get_customers, get_customer, delete_customer
 
 def customer_page():
     st.markdown("<h1 class='main-header'>👥 Customer Management Dashboard</h1>", unsafe_allow_html=True)
-    length = 0
-    res = requests.get(CUSTOMER_API_URL)
-    if res.ok:
-        data = res.json()
-        length = len(data)
+    
     tab1, tab2, tab3 = st.tabs(["📋 Customer List", "➕ Add Customer", "🔍 Search & Modify"])
     
     # ================ TAB 1: CUSTOMER LIST ================
@@ -35,7 +31,7 @@ def customer_page():
         try:
             res = requests.get(CUSTOMER_API_URL)
             if res.ok:
-                data = res.json()
+                data = get_customers()
                 display_fields = ["customer_id", "name", "type", "email", "phone", "datetime"]
                 df = pd.DataFrame(data)
                 
@@ -268,127 +264,65 @@ def customer_page():
     
     with tab3:
         st.subheader("Find and Modify Customer")
-        
+
         lookup_id = st.text_input("Customer ID *", key="lookup", placeholder="Enter ID to search")
-            
-        if st.button("Find Customer", key="find"):
+
+        if st.button("Find Customer"):
             try:
                 if not lookup_id:
                     st.error("Enter a customer ID to search")
-                    return
-                @st.cache_data(ttl=60)
-                def get_customer(customer_id):
-                    res = requests.get(f"{CUSTOMER_API_URL}/{customer_id}")
-                    if res.ok:
-                        return res.json()
-                    return None
-                
-                customer_data = get_customer(lookup_id)
-                
-                if customer_data:
-                    st.subheader("Customer Details")
-                    
-                    info_col1, info_col2, info_col3 = st.columns(3)
-                    
-                    with info_col1:
-                        st.metric("Customer ID", customer_data.get("customer_id", "N/A"))
-                        st.metric("Name", customer_data.get("name", "N/A"))
-                    
-                    with info_col2:
-                        st.metric("Type", customer_data.get("type", "N/A"))
-                        st.metric("Email", customer_data.get("email", "N/A"))
-                    
-                    with info_col3:
-                        st.metric("Phone", customer_data.get("phone", "N/A"))
-                        created_date = customer_data.get("datetime", "N/A")
-                        if created_date != "N/A":
-                            created_date = pd.to_datetime(created_date).strftime("%Y-%m-%d")
-                        st.metric("Created On", created_date)
-                    
-                    st.session_state['found_customer'] = customer_data
-                    
-                    st.markdown("<div class='section-divider'></div>", unsafe_allow_html=True)
-                    st.subheader("Modify Customer")
-                    
-                    update_tab, delete_tab = st.tabs(["Update Info", "Delete Customer"])
-                    
-                    with update_tab:
-                        with st.form(key="update_customer_form"):
-                            update_col1, update_col2 = st.columns(2)
-                            
-                            with update_col1:
-                                new_name = st.text_input("Name", 
-                                                        value=customer_data.get("name", ""))
-                                new_email = st.text_input("Email", 
-                                                        value=customer_data.get("email", ""))
-                            
-                            with update_col2:
-                                new_phone = st.text_input("Phone", 
-                                                        value=customer_data.get("phone", ""))
-                                new_type = st.selectbox("Type", 
-                                                        options=["VIP", "Regular", "New"],
-                                                        index=["VIP", "Regular", "New"].index(customer_data.get("type", "Regular")))
-                            
-                            update_submit = st.form_submit_button(label="💾 Save Changes", use_container_width=True, type="primary")
-                        
-                        if update_submit:
-                            payload = {}
-                            original = st.session_state['found_customer']
-                            
-                            if new_name != original.get("name", ""): 
-                                payload["name"] = new_name
-                            if new_email != original.get("email", ""): 
-                                payload["email"] = new_email
-                            if new_phone != original.get("phone", ""): 
-                                payload["phone"] = new_phone
-                            if new_type != original.get("type", ""): 
-                                payload["type"] = new_type
-                            
-                            if not payload:
-                                st.info("No changes detected")
-                            else:
-                                try:
-                                    res = requests.put(f"{CUSTOMER_API_URL}/{lookup_id}", json=payload)
-                                    if res.ok:
-                                        st.success("✅ Customer updated successfully")
-                                        fetch_customers.cache_clear()
-                                        get_customer.clear()
-                                    else:
-                                        st.error(f"Error {res.status_code}: {res.text}")
-                                except Exception as e:
-                                    st.error(f"Error: {str(e)}")
-                    
-                    with delete_tab:
-                        st.warning("⚠️ This action cannot be undone!")
-                        if st.button("🗑️ Delete Customer", key="delete", use_container_width=True):
-                            try:
-                                res = requests.delete(f"{CUSTOMER_API_URL}/{lookup_id}")
-                                if res.status_code == 200:
-                                    st.success("✅ Customer deleted successfully!")
-                                    fetch_customers.cache_clear()
-                                    get_customer.clear()
-                                    if 'found_customer' in st.session_state:
-                                        del st.session_state['found_customer']
-                                    st.rerun()
-                                else:
-                                    st.error(f"❌ Failed to delete customer. Error: {res.text}")
-                            except Exception as e:
-                                st.error(f"🚨 Connection error: {str(e)}")                    
                 else:
-                    st.error(f"Customer with ID '{lookup_id}' not found")
+                    customer_data = get_customer(lookup_id)
+
+                    if customer_data:
+                        st.session_state["found_customer"] = customer_data
+                        st.session_state["customer_id"] = lookup_id
+                        st.rerun()
+                    else:
+                        st.error("❌ Customer not found.")
             except Exception as e:
-                st.error(f"Error: {str(e)}")    
-        
+                st.error(f"Error: {str(e)}")
 
-@lru_cache(maxsize=32)
-def fetch_customers(timestamp_minute):
-    """Fetch customers with caching by minute timestamp to avoid excessive API calls"""
-    try:
-        res = requests.get(CUSTOMER_API_URL)
-        if res.ok:
-            return res.json()
-        return []
-    except Exception as e:
-        st.error(f"Error fetching customer data: {str(e)}")
-        return []
+        # Show form if customer found
+        if "found_customer" in st.session_state:
+            customer_data = st.session_state["found_customer"]
+            lookup_id = st.session_state["customer_id"]
 
+            st.subheader("Edit Customer")
+
+            with st.form("edit_customer_form"):
+                updated_name = st.text_input("Full Name", value=customer_data["name"])
+                updated_email = st.text_input("Email", value=customer_data["email"])
+                updated_phone = st.text_input("Phone", value=customer_data["phone"])
+                updated_type = st.selectbox("Type", ["Regular", "VIP", "New"],
+                                            index=["Regular", "VIP", "New"].index(customer_data["type"]))
+
+                submitted = st.form_submit_button("Update Customer")
+                if submitted:
+                    payload = {
+                        "name": updated_name,
+                        "email": updated_email,
+                        "phone": updated_phone,
+                        "type": updated_type
+                    }
+                    res = requests.put(f"{CUSTOMER_API_URL}/{lookup_id}", json=payload)
+                    if res.ok:
+                        st.success("✅ Customer updated successfully!")
+                        time.sleep(5)
+                        st.session_state.pop("found_customer", None)
+                        st.session_state.pop("customer_id", None)
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Update failed: {res.status_code} - {res.text}")
+
+            # Delete button (outside form)
+            if st.button("🗑️ Delete Customer"):
+                res = requests.delete(f"{CUSTOMER_API_URL}/{lookup_id}")
+                if res.ok:
+                    st.success("✅ Customer deleted successfully!")
+                    time.sleep(5)
+                    st.session_state.pop("found_customer", None)
+                    st.session_state.pop("customer_id", None)
+                    st.rerun()
+                else:
+                    st.error(f"❌ Delete failed: {res.status_code} - {res.text}")
